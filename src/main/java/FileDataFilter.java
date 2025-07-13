@@ -24,6 +24,8 @@ public class StringFilter {
         outputFileWriters.put(floatsOutputPath, null);
         outputFileWriters.put(stringsOutputPath, null);
 
+        Statistics statistics = new Statistics();
+
         for(var inputFile: StringFilter.inputFiles){
             try(BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
                 String line = br.readLine();
@@ -32,6 +34,9 @@ public class StringFilter {
                     try{
                         if (isInteger(line)){
                             writeToFile(line, integersOutputPath);
+                            if (collectShortStatistics || collectFullStatistics){
+
+                            }
                         } else if (isFloat(line)){
                             writeToFile(line, floatsOutputPath);
                         } else {
@@ -93,6 +98,7 @@ public class StringFilter {
                         i++;
                         StringFilter.outputPath = "." + args[i];
                     }
+
                     break;
                 case "-p":
                     if(i == args.length - 1){
@@ -138,5 +144,23 @@ public class StringFilter {
 
     public static boolean isFloat(String string){
         return string.matches("[+-]?(\\d+([.]\\d*)?([eE][+-]?\\d+)?|[.]\\d+([eE][+-]?\\d+)?)");
+    }
+
+    private class Statistics{
+        int integersCount = 0;
+        int floatsCount = 0;
+        int StringsCount = 0;
+        long minInteger = Long.MAX_VALUE;
+        long maxInteger = Long.MIN_VALUE;
+        long integersSum = 0;
+        long integersAverage = 0;
+
+        float minFloat = Float.MAX_VALUE;
+        float maxFloat = Float.MIN_VALUE;
+        float floatsSum = 0;
+        float floatsAverage = 0;
+
+        int minStringLength = Integer.MAX_VALUE;
+        int maxStringLength = Integer.MIN_VALUE;
     }
 }
