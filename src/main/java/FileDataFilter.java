@@ -1,130 +1,82 @@
 import java.io.*;
-import java.util.ArrayList;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 
-public class StringFilter {
-    private static String outputPath;
-    private static String outputFilePrefix;
-    private static boolean collectShortStatistics;
-    private static boolean collectFullStatistics;
-    private static List<String> inputFiles;
-    private static boolean appendToOutputFiles;
-    private static HashMap<String, BufferedWriter> outputFileWriters;
+public class FileDataFilter {
 
-    public static void main(String[] args){
-        parseArguments(args);
+    public void filter(String outputPath,
+                                String outputFilePrefix,
+                                boolean collectShortStatistics,
+                                boolean collectFullStatistics,
+                                List<String> inputFiles,
+                                boolean appendToOutputFiles){
 
         String integersOutputPath = outputPath + outputFilePrefix + "integers.txt";
         String floatsOutputPath = outputPath + outputFilePrefix + "floats.txt";
         String stringsOutputPath = outputPath + outputFilePrefix + "strings.txt";
 
-        outputFileWriters = new HashMap();
+        HashMap<String, BufferedWriter> outputFileWriters = new HashMap();
         outputFileWriters.put(integersOutputPath, null);
         outputFileWriters.put(floatsOutputPath, null);
         outputFileWriters.put(stringsOutputPath, null);
 
         Statistics statistics = new Statistics();
 
-        for(var inputFile: StringFilter.inputFiles){
+        for(var inputFile: inputFiles){
             try(BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
                 String line = br.readLine();
 
                 while (line != null){
                     try{
                         if (isInteger(line)){
-                            writeToFile(line, integersOutputPath);
-                            if (collectShortStatistics || collectFullStatistics){
-
-                            }
+                            writeToFile(line, integersOutputPath, outputFileWriters,
+                                    outputPath, appendToOutputFiles);
+                            statistics.updateIntegersStatistics(line, collectShortStatistics, collectFullStatistics);
                         } else if (isFloat(line)){
-                            writeToFile(line, floatsOutputPath);
+                            writeToFile(line, floatsOutputPath, outputFileWriters,
+                                    outputPath, appendToOutputFiles);
+                            statistics.updateFloatsStatistics(line, collectShortStatistics, collectFullStatistics);
                         } else {
-                            writeToFile(line, stringsOutputPath);
+                            writeToFile(line, stringsOutputPath, outputFileWriters,
+                                    outputPath, appendToOutputFiles);
+                            statistics.updateStringsStatistics(line, collectShortStatistics, collectFullStatistics);
                         }
                     } catch(FileNotFoundException e){
-                        System.out.println("Line \"" + line
-                                + "\" from input file \"" + inputFile + "\" cant be written to output file because file wa not found." +
-                                "\nIt will be ignored and execution of " +
-                                "program will continue. \nException message: " + e.getLocalizedMessage() + "\n");
+                        System.out.println(String.format("Строка \"%s\" из входного файла \"%s\" " +
+                                "не может быть записана, поскольку выходной файл не был найден." +
+                                "\nВыполнение программы будет продолжено." +
+                                "\nСообщение исключения: %s\n", line, inputFile, e.getLocalizedMessage()));
                     }
                     catch (IOException e){
-                        System.out.println("Unhandled exception occurred when writing line: \n" + line
-                                + "\" from input file \"" + inputFile + "\n. Line will be ignored and execution of " +
-                                "program will continue. \nException message: " + e.getLocalizedMessage() + "\n");
+                        System.out.println(String.format("Во время обработки строки \n%s\" из входного файла \"%s\n. " +
+                                "возникло необработанное исключение. " +
+                                "Строка будет проигнорирована и выполнение программы будет продолжено. " +
+                                "\nСообщение исключения: %s\n", line, inputFile, e.getLocalizedMessage()));
                     }
-
                     line = br.readLine();
                 }
             } catch (FileNotFoundException e) {
-                System.out.println("File \"" + inputFile +
-                        "\" was not found. \nIt will be ignored and execution of the program will continue.\n");
+                System.out.println(String.format("Входной файл \"%s\" не был найден." +
+                        "\nФайл будет проигнорирован и выполнение программы будет продолжено.\n", inputFile));
             } catch (IOException e) {
-                System.out.println("When processing file \"" + inputFile + "\" unhandled exception was thrown. " +
-                        "This file will be ignored and execution of the program will continue. Exception message:"
-                        + e.getMessage() + "\n");
+                System.out.println(String.format("When processing input file \"%s\" unhandled exception was thrown. " +
+                        "This file will be ignored and execution of the program will continue. " +
+                        "Exception message:%s\n", inputFile, e.getMessage()));
             }
         }
-
-
-        System.out.println("resultPath: " + outputPath);
-        System.out.println("outputFilePrefix: " + outputFilePrefix);
-        System.out.println("collectShortStatistics: " + collectShortStatistics);
-        System.out.println("collectFullStatistics: " + collectFullStatistics);
-        System.out.print("inputFiles:");
-        for(String inputFile: inputFiles){
-            System.out.print(" " + inputFile + ",");
-        }
-        System.out.println();
-        System.out.println("appendToOutputFiles: " + appendToOutputFiles);
-    }
-
-    private static void parseArguments(String[] args){
-        StringFilter.outputPath = "";
-        StringFilter.outputFilePrefix = "";
-        StringFilter.collectShortStatistics = false;
-        StringFilter.collectFullStatistics = false;
-        StringFilter.inputFiles = new ArrayList<>();
-        StringFilter.appendToOutputFiles = false;
-
-        for (int i = 0; i < args.length; i++){
-            var arg = args[i];
-            switch(arg){
-                case "-o":
-                    if(i == args.length - 1){
-                        System.out.println("Value for -o option was not provided. Option will be ignored.");
-                    }
-                    else{
-                        i++;
-                        StringFilter.outputPath = "." + args[i];
-                    }
-
-                    break;
-                case "-p":
-                    if(i == args.length - 1){
-                        System.out.println("Value for -p option was not provided. Option will be ignored.");
-                    }
-                    else{
-                        i++;
-                        StringFilter.outputFilePrefix = args[i];
-                    }
-                    break;
-                case "-s":
-                    StringFilter.collectShortStatistics = true;
-                    break;
-                case "-f":
-                    StringFilter.collectFullStatistics = true;
-                    break;
-                case "-a":
-                    StringFilter.appendToOutputFiles = true;
-                    break;
-                default:
-                    StringFilter.inputFiles.add(args[i]);
-            }
+        if (collectShortStatistics || collectFullStatistics){
+            System.out.println(statistics.getStatisticsReport(collectShortStatistics, collectFullStatistics));
         }
     }
 
-    private static void writeToFile(String data, String outputFileName) throws IOException {
+    private  void writeToFile(String data,
+                              String outputFileName,
+                              HashMap<String, BufferedWriter> outputFileWriters,
+                              String outputPath,
+                              boolean appendToOutputFiles) throws IOException {
         if (outputFileWriters.get(outputFileName) == null){
             File dir = new File(outputPath);
             if (!dir.exists()){
@@ -138,29 +90,11 @@ public class StringFilter {
         writer.flush();
     }
 
-    public static boolean isInteger(String string){
+    public  boolean isInteger(String string){
         return string.matches("-?[1-9]\\d*|0");
     }
 
-    public static boolean isFloat(String string){
+    public  boolean isFloat(String string){
         return string.matches("[+-]?(\\d+([.]\\d*)?([eE][+-]?\\d+)?|[.]\\d+([eE][+-]?\\d+)?)");
-    }
-
-    private class Statistics{
-        int integersCount = 0;
-        int floatsCount = 0;
-        int StringsCount = 0;
-        long minInteger = Long.MAX_VALUE;
-        long maxInteger = Long.MIN_VALUE;
-        long integersSum = 0;
-        long integersAverage = 0;
-
-        float minFloat = Float.MAX_VALUE;
-        float maxFloat = Float.MIN_VALUE;
-        float floatsSum = 0;
-        float floatsAverage = 0;
-
-        int minStringLength = Integer.MAX_VALUE;
-        int maxStringLength = Integer.MIN_VALUE;
     }
 }
